@@ -1,0 +1,40 @@
+﻿-
+track:01
+title:Bags' Groove (Take 1)
+length:678
+artist:Miles Davis & The Modern Jazz Giants
+albumartist:Miles Davis & The Modern Jazz Giants
+album:Bags' Groove
+date:1954
+genre:Hard Bop
+codec:CDDA
+bitdepth:16
+samplerate:44100
+channels:2
+-
+track:02
+title:Bags' Groove (Take 2)
+length:565
+artist:Miles Davis & The Modern Jazz Giants
+albumartist:Miles Davis & The Modern Jazz Giants
+album:Bags' Groove
+date:1954
+genre:Hard Bop
+codec:CDDA
+bitdepth:16
+samplerate:44100
+channels:2
+-
+track:03
+title:Airegin
+length:301
+artist:Miles Davis & The Modern Jazz Giants
+albumartist:Miles Davis & The Modern Jazz Giants
+album:Bags' Groove
+date:1954
+genre:Hard Bop
+codec:CDDA
+bitdepth:16
+samplerate:44100
+channels:2
+-

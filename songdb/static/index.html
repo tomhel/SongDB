@@ -1,0 +1,161 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+  <title>SongDB</title>
+  <link rel="stylesheet" type="text/css" href="static/style.css">
+  <script type="text/javascript" src="static/jquery-2.1.4.min.js"></script>
+  <script type="text/javascript" src="static/underscore-min.js"></script>
+  <script type="text/javascript" src="static/app.js"></script>
+</head>
+<body>
+
+<div id="header">
+  <span id="appwarn"></span>
+  <span id="appinfo"></span>
+  <a href="/admin/log">[log]</a>
+  <a id="shutdownbtn">[shutdown]</a>
+</div>
+
+<div id="search">
+  <div>
+    <textarea rows="5" cols="70" id="searchbox"></textarea>
+    <p><span>like =</span><span>equal :</span><span>greater &gt;</span><span>lesser &lt;</span><span>not ~</span></p>
+  </div>
+  <div>
+    <p><button id="searchbtn" title="ctrl + enter">search</button></p>
+    <p><a id="clearbtn">[clear]</a></p>
+  </div>
+</div>
+
+<div id="command">
+</div>
+
+<div id="resultinfo">
+  <p id="resultinfotext"></p>
+</div>
+
+<div id="result">
+</div>
+
+<script type="text/template" id="template-song-small">
+  <div id="song<%= id %>" class="song">
+    <p class="top"><span onclick="gotoTop()">&nbsp;&nbsp;^</span></p>
+    <p class="quickinfo">
+      <span class="expandph"><a class="expandlink" onclick="expandSong('<%= id %>','song<%= id %>')">[+]</a></span>
+      <span class="quickattr" id="codec<%= id %>" onclick="copyValue('codec','<%= id %>',this.id)"><%- codec %></span>
+      <span class="quickattr" id="bitdepth<%= id %>" onclick="copyValue('bitdepth','<%= id %>',this.id)"><%= bitdepth %>&nbsp;bit</span>
+      <span class="quickattr" id="samplerate<%= id %>" onclick="copyValue('samplerate','<%= id %>',this.id)"><%= samplerate %>&nbsp;Hz</span>
+      <span class="quickattr" id="bitrate<%= id %>" onclick="copyValue('bitrate','<%= id %>',this.id)"><%= bitrate %>&nbsp;kbit/s</span>
+      <span class="quickattr" id="channels<%= id %>" onclick="copyValue('channels','<%= id %>',this.id)"><%= channels %>&nbsp;ch</span>
+      <span class="quickattr" id="length<%= id %>" onclick="copyValue('length','<%= id %>',this.id)"><%= length %>&nbsp;s</span>
+    </p>
+    <table>
+      <tr>
+        <td class="tagname"><span class="tag">Title</span></td>
+        <td><span id="title<%= id %>" class="value" onclick="copyValue('title','<%= id %>',this.id)"><%- title %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Artist</span></td>
+        <td><span id="artist<%= id %>" class="value" onclick="copyValue('artist','<%= id %>',this.id)"><%- artist %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Album</span></td>
+        <td><span id="album<%= id %>" class="value" onclick="copyValue('album','<%= id %>',this.id)"><%- album %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Media</span></td>
+        <td><span id="media<%= id %>" class="value" onclick="copyValue('media','<%= id %>',this.id)"><%- media %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Comment</span></td>
+        <td><span id="comment<%= id %>" class="value" onclick="copyValue('comment','<%= id %>',this.id)"><%- comment %></span></td>
+      </tr>
+    </table>
+  </div>
+</script>
+
+<script type="text/template" id="template-song-full">
+  <div id="song<%= id %>" class="song">
+    <p class="top"><span onclick="gotoTop()">&nbsp;&nbsp;^</span></p>
+    <p class="quickinfo">
+      <span class="expandph">&nbsp;</span>
+      <span class="quickattr" id="codec<%= id %>" onclick="copyValue('codec','<%= id %>',this.id)"><%- codec %></span>
+      <span class="quickattr" id="bitdepth<%= id %>" onclick="copyValue('bitdepth','<%= id %>',this.id)"><%= bitdepth %>&nbsp;bit</span>
+      <span class="quickattr" id="samplerate<%= id %>" onclick="copyValue('samplerate','<%= id %>',this.id)"><%= samplerate %>&nbsp;Hz</span>
+      <span class="quickattr" id="bitrate<%= id %>" onclick="copyValue('bitrate','<%= id %>',this.id)"><%= bitrate %>&nbsp;kbit/s</span>
+      <span class="quickattr" id="channels<%= id %>" onclick="copyValue('channels','<%= id %>',this.id)"><%= channels %>&nbsp;ch</span>
+      <span class="quickattr" id="length<%= id %>" onclick="copyValue('length','<%= id %>',this.id)"><%= length %>&nbsp;s</span>
+    </p>
+    <table>
+      <tr>
+        <td class="tagname"><span class="tag">Title</span></td>
+        <td><span id="title<%= id %>" class="value" onclick="copyValue('title','<%= id %>',this.id)"><%- title %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Artist</span></td>
+        <td><span id="artist<%= id %>" class="value" onclick="copyValue('artist','<%= id %>',this.id)"><%- artist %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Album</span></td>
+        <td><span id="album<%= id %>" class="value" onclick="copyValue('album','<%= id %>',this.id)"><%- album %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Media</span></td>
+        <td><span id="media<%= id %>" class="value" onclick="copyValue('media','<%= id %>',this.id)"><%- media %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Comment</span></td>
+        <td><span id="comment<%= id %>" class="value" onclick="copyValue('comment','<%= id %>',this.id)"><%- comment %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Genre</span></td>
+        <td><span id="genre<%= id %>" class="value" onclick="copyValue('genre','<%= id %>',this.id)"><%- genre %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Albumartist</span></td>
+        <td><span id="albumartist<%= id %>" class="value" onclick="copyValue('albumartist','<%= id %>',this.id)"><%- albumartist %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Composer</span></td>
+        <td><span id="composer<%= id %>" class="value" onclick="copyValue('composer','<%= id %>',this.id)"><%- composer %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Performer</span></td>
+        <td><span id="performer<%= id %>" class="value" onclick="copyValue('performer','<%= id %>',this.id)"><%- performer %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Date</span></td>
+        <td><span id="date<%= id %>" class="value" onclick="copyValue('date','<%= id %>',this.id)"><%- date %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Codecprofile</span></td>
+        <td><span id="codecprofile<%= id %>" class="value" onclick="copyValue('codecprofile','<%= id %>',this.id)"><%- codecprofile %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Tool</span></td>
+        <td><span id="tool<%= id %>" class="value" onclick="copyValue('tool','<%= id %>',this.id)"><%- tool %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Note</span></td>
+        <td><span id="note<%= id %>" class="value" onclick="copyValue('note','<%= id %>',this.id)"><%- note %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Track</span></td>
+        <td><span id="track<%= id %>" class="value" onclick="copyValue('track','<%= id %>',this.id)"><%- track %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Modified</span></td>
+        <td><span id="modified<%= id %>" class="value" onclick="copyValue('modified','<%= id %>',this.id)"><%- modified %></span></td>
+      </tr>
+      <tr>
+        <td class="tagname"><span class="tag">Path</span></td>
+        <td><span id="path<%= id %>" class="value" onclick="copyValue('path','<%= id %>',this.id)"><%- path %></span></td>
+      </tr>
+    </table>
+  </div>
+</script>
+
+</body>
+</html>
