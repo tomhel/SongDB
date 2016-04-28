@@ -48,12 +48,14 @@ Prerequisites:
 * Python 2.7
 
 1. Install dependencies
+
     ```
     pip install -r requirements.txt
     ```
 2. Copy songdb directory to a directory of your choice
 3. Set configuration options in songdb/config.cfg
 4. Start SongDB
+
     ```
     python server.py
     ```
