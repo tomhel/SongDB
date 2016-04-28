@@ -10,6 +10,8 @@ SongDB uses SQLite3 as a database backend and provides a REST/JSON API using Fla
 
 I wrote this for a friend in a bit of a hurry. The code is pretty raw and tailored for a specific need. I did not have time to make a test suite, but I've not heard of any bugs as of yet. Fingers crossed ;)
 
+##Attributes
+
 These attributes are indexed (all attributes are optional):
 
 Attribute    | Type
