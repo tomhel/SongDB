@@ -2,7 +2,7 @@
 
 SongDB indexes your music collection (CDs, files, whatever) and makes it all searchable on various attributes through a web interface.
 
-[![songdb](songdb_mini.png?raw=true)][songdb.png?raw=true]
+[![songdb](songdb_mini.png?raw=true)](songdb.png?raw=true)
 
 Requires Python 2.7. Tested on Linux and Windows. Should work in all modern browsers.
 
@@ -56,10 +56,10 @@ python server.py
 
 ##Loading your music
 
-The SQLite database is populated on startup from text files placed in the configured datadir. These text files must all have the same encoding. For example utf8, see configuration option encoding. The text files can be gzipped to save disk space.
+The SQLite database is populated on startup from text files placed in the configured _datadir_. These text files must all have the same encoding. For example utf8, see configuration option _encoding_. The text files can be gzipped to save disk space.
 Any number of text files can be placed in the datadir. Each text file must abide by the following format. A hypen character (-) is used to separate songs.
 (Note: only a subset of available attributes are set in this example. See list above for all available attributes)
-´´´
+```
 -
 track:01
 title:Bags' Groove (Take 1)
@@ -100,4 +100,4 @@ bitdepth:16
 samplerate:44100
 channels:2
 -
-´´´
+```
