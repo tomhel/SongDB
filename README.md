@@ -59,6 +59,7 @@ Prerequisites:
     ```
     python server.py
     ```
+    (on Windows it can be run as a background process using pythonw instead of python)
 5. Open your browser and go to http://localhost:3333 or whatever host/port you've configured
 
 ##Loading your music
