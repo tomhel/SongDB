@@ -48,15 +48,15 @@ Prerequisites:
 * Python 2.7
 
 1. Install dependencies
-```
-pip install -r requirements.txt
-```
+    ```
+    pip install -r requirements.txt
+    ```
 2. Copy songdb directory to a directory of your choice
 3. Set configuration options in songdb/config.cfg
 4. Start SongDB
-```
-python server.py
-```
+    ```
+    python server.py
+    ```
 5. Open your browser and go to http://localhost:3333 or whatever host/port you've configured
 
 ##Loading your music
