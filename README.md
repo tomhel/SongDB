@@ -35,28 +35,6 @@ These attributes are indexed (all attributes are optional):
 | path | text |
 | modified | date/time (yyyy-mm-dd hh:mm:ss) |
 
-* track - integer
-* title - text
-* length - integer
-* artist - text
-* albumartist - text
-* composer  - text
-* performer - text
-* album - text
-* date - text
-* genre - text
-* codec - text
-* bitrate - integer
-* codecprofile - text
-* bitdepth - integer
-* samplerate - integer
-* channels - integer
-* tool - text
-* comment - text
-* note - text
-* path - text
-* modified - date/time (yyyy-mm-dd hh:MM:ss)
-
 ##License
 
 MIT
