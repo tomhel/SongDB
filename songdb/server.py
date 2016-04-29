@@ -88,7 +88,6 @@ date_funcs = [
 ]
 
 keywords = [
-    ("ANY", ["=", "~"], ["like", "not like"], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
     ("media", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
     ("track", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
     ("title", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
@@ -116,8 +115,8 @@ keywords = [
     )
 ]
 
-keywords_dbkeys = [x[0] for x in keywords[1:]]
-keywords_db = keywords[1:]
+keywords_dbkeys = [x[0] for x in keywords]
+keywords_db = keywords
 ekeywords = expand_keywords(keywords)
 keywords_lookup = {k[0]: k for k in keywords}
 ekeywords_lookup = {k[0]: k for k in ekeywords}
@@ -186,9 +185,8 @@ def setup_db():
     c.execute(sql)
 
     sql = """
-       create view v_song as select song_f.id, %s, %s as any from song_f\n%s
+       create view v_song as select song_f.id, %s from song_f\n%s
     """ % (",\n".join(["%s_d.value as %s" % (k, k) for k in keywords_dbkeys]),
-           "||' '||\n".join(["ifnull(nullif(%s_d.value, %s), '')" % (k[0], "'" + k[7] + "'" if k[6] == "text" else k[7]) for k in keywords_db if k[0] != "modified"]),
            "\n".join(["join %s_d on %s_d.id = song_f.%s_id" % (k, k, k) for k in keywords_dbkeys])
           )
     logger.debug(sql)
@@ -456,7 +454,7 @@ def get_keys():
 
 
 @app.route('/admin/shutdown', methods=['GET'])
-def do_reload():
+def do_shutdown():
     logger.info("api shutdown triggered")
     shutdown_server()
     return jsonify({})
