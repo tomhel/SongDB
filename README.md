@@ -4,7 +4,7 @@ SongDB indexes your music collection (CDs, files, whatever) and makes it all sea
 
 [![songdb](songdb_mini.png?raw=true)](songdb.png?raw=true)
 
-Requires Python 2.7. Tested on Linux and Windows. Should work in all modern browsers.
+Requires Python 2.7+. Tested on Linux and Windows. Should work in all modern browsers.
 
 SongDB uses SQLite3 as a database backend and provides a REST/JSON API using Flask. The web interface uses JQuery. The database model is a star schema, each attribute has its own dimension table. This makes searching fast end efficient.
 
@@ -45,7 +45,8 @@ MIT
 ##Installation
 
 Prerequisites:
-* Python 2.7
+* Python 2.7+
+* pip
 
 1. Install dependencies
 
