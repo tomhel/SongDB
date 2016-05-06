@@ -47,6 +47,7 @@ logger = None
 warncount = 0
 songcount = 0
 
+
 class NotFoundError(Exception):
     pass
 
@@ -80,11 +81,11 @@ int_funcs = [
 ]
 
 date_funcs = [
-    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970,1,1)).total_seconds(),
-    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970,1,1)).total_seconds(),
-    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970,1,1)).total_seconds(),
-    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970,1,1)).total_seconds(),
-    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970,1,1)).total_seconds()
+    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds(),
+    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds(),
+    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds(),
+    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds(),
+    lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds()
 ]
 
 keywords = [
@@ -110,9 +111,8 @@ keywords = [
     ("note", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
     ("path", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
     ("modified", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], date_funcs,
-        lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970,1,1)).total_seconds(),
-        lambda x: datetime.utcfromtimestamp(x).strftime('%Y-%m-%d %H:%M:%S'), "integer", -9223372036854775808
-    )
+        lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds(),
+        lambda x: datetime.utcfromtimestamp(x).strftime('%Y-%m-%d %H:%M:%S'), "integer", -9223372036854775808)
 ]
 
 keywords_dbkeys = [x[0] for x in keywords]
@@ -187,8 +187,7 @@ def setup_db():
     sql = """
        create view v_song as select song_f.id, %s from song_f\n%s
     """ % (",\n".join(["%s_d.value as %s" % (k, k) for k in keywords_dbkeys]),
-           "\n".join(["join %s_d on %s_d.id = song_f.%s_id" % (k, k, k) for k in keywords_dbkeys])
-          )
+           "\n".join(["join %s_d on %s_d.id = song_f.%s_id" % (k, k, k) for k in keywords_dbkeys]))
     logger.debug(sql)
     c.execute(sql)
     conn.commit()
@@ -225,7 +224,7 @@ def load_data():
         logger.info("loading file: %s, %s" % (org_file, enc))
 
         with codecs.open(f, "r", enc) as ff:
-            lines = [x.strip().strip(u"\ufeff").strip() for x in ff.readlines()];
+            lines = [x.strip().strip(u"\ufeff").strip() for x in ff.readlines()]
 
         if extracted:
             logger.debug("removing file: %s" % f)
@@ -342,7 +341,7 @@ def find_songs(afilter):
             raise ValidationError("unknown filter: %s" % f)
 
     if len(criterias) == 0:
-        return [];
+        return []
 
     where, values = build_where(set(criterias))
 
@@ -438,11 +437,11 @@ def get_info():
     c = conn.cursor()
     c.execute("select count(*) from v_song")
     result = {
-             "loaded": c.fetchone()[0],
-             "found": songcount,
-             "warnings": warncount,
-             "dbsize": os.path.getsize(server_conf["database"])
-         }
+        "loaded": c.fetchone()[0],
+        "found": songcount,
+        "warnings": warncount,
+        "dbsize": os.path.getsize(server_conf["database"])
+    }
     conn.close()
     return jsonify(result)
 
@@ -463,6 +462,7 @@ def do_shutdown():
 @app.route('/admin/log', methods=['GET'])
 def get_log():
     logger.debug("log")
+
     def generate():
         with open(server_conf["logfile"], "r") as f:
             for line in f:
@@ -507,12 +507,12 @@ def create_json_error_response(code, reason, description):
 
 
 def str2bool(s):
-   return s.lower() in ["true"]
+    return s.lower() in ["true"]
 
 
 def remove_pid():
     if os.path.isfile(server_conf['pidfile']):
-       os.unlink(server_conf['pidfile'])
+        os.unlink(server_conf['pidfile'])
 
 
 def create_pid():
