@@ -225,6 +225,7 @@ def load_data():
 
         with codecs.open(f, "r", enc) as ff:
             lines = [x.strip().strip(u"\ufeff").strip() for x in ff.readlines()]
+            lines.append("-")
 
         if extracted:
             logger.debug("removing file: %s" % f)
