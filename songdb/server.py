@@ -24,6 +24,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
+from functools import wraps
 from flask import Flask, request, jsonify, Response
 import os
 import fnmatch
@@ -390,7 +391,35 @@ def build_where(conds):
     return " and ".join(allgroups), values
 
 
+def check_auth(username, password):
+    return username == server_conf["username"] and password == server_conf["password"]
+
+
+def authenticate():
+    return Response(
+    'Could not verify your access level for that URL.\n'
+    'You have to login with proper credentials', 401,
+    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+
+
+def requires_auth(f):
+    # basic auth, based on code snippet: http://flask.pocoo.org/snippets/8/
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+
+        if not str2bool(server_conf["require_auth"]):
+            return f(*args, **kwargs)
+        elif not auth or not check_auth(auth.username, auth.password):
+            return authenticate()
+        else:
+            return f(*args, **kwargs)
+
+    return decorated
+
+
 @app.route('/song', methods=['POST'])
+@requires_auth
 def do_search():
     logger.debug("search")
     jsondata = request.get_json()
@@ -407,6 +436,7 @@ def do_search():
 
 
 @app.route('/song/<int:songid>', methods=['GET'])
+@requires_auth
 def get_song(songid):
     logger.debug("get song: %d" % songid)
     song = fetch_song(songid)
@@ -418,6 +448,7 @@ def get_song(songid):
 
 
 @app.route('/song/<int:songid>/<string:attribute>', methods=['GET'])
+@requires_auth
 def get_song_attr(songid, attribute):
     logger.debug("get song attribute: %d, %s" % (songid, attribute))
     song = fetch_song(songid)
@@ -432,6 +463,7 @@ def get_song_attr(songid, attribute):
 
 
 @app.route('/admin/info', methods=['GET'])
+@requires_auth
 def get_info():
     logger.debug("info")
     conn = get_dbconn()
@@ -448,12 +480,14 @@ def get_info():
 
 
 @app.route('/admin/keys', methods=['GET'])
+@requires_auth
 def get_keys():
     logger.debug("keys")
     return jsonify({"keys": sorted([x[0] for x in keywords])})
 
 
 @app.route('/admin/shutdown', methods=['GET'])
+@requires_auth
 def do_shutdown():
     logger.info("api shutdown triggered")
     shutdown_server()
@@ -461,6 +495,7 @@ def do_shutdown():
 
 
 @app.route('/admin/log', methods=['GET'])
+@requires_auth
 def get_log():
     logger.debug("log")
 
@@ -473,6 +508,7 @@ def get_log():
 
 
 @app.route("/")
+@requires_auth
 def get_index():
     logger.debug("index")
     return app.send_static_file("index.html")
