@@ -4,7 +4,7 @@ SongDB indexes your music collection (CDs, files, whatever) and makes it all sea
 
 [![songdb](songdb_mini.png?raw=true)](songdb.png?raw=true)
 
-Requires Python 2.7+. Tested on Linux and Windows. Should work in all modern browsers.
+Requires Python 3+. Tested on Linux and Windows. Should work in all modern browsers.
 
 SongDB uses SQLite3 as a database backend and provides a REST/JSON API using Flask. The web interface uses JQuery. The database model is a star schema, each attribute has its own dimension table. This makes searching fast end efficient.
 
@@ -14,29 +14,29 @@ I wrote this for a friend in a bit of a hurry. The code is pretty raw and tailor
 
 These attributes are indexed (all attributes are optional):
 
-Attribute    | Type
------------- | ----
-track        | integer
-title        | text
-length       | integer
-artist       | text
-albumartist  | text
-composer     | text
-performer    | text
-album        | text
-date         | text
-genre        | text
-codec        | text
-bitrate      | integer
-codecprofile | text
-bitdepth     | integer
-samplerate   | integer
-channels     | integer
-tool         | text
-comment      | text
-note         | text
-path         | text
-modified     | date/time (yyyy-mm-dd hh:mm:ss)
+| Attribute    | Type                            |
+|--------------|---------------------------------|
+| track        | integer                         |
+| title        | text                            |
+| length       | integer                         |
+| artist       | text                            |
+| albumartist  | text                            |
+| composer     | text                            |
+| performer    | text                            |
+| album        | text                            |
+| date         | text                            |
+| genre        | text                            |
+| codec        | text                            |
+| bitrate      | integer                         |
+| codecprofile | text                            |
+| bitdepth     | integer                         |
+| samplerate   | integer                         |
+| channels     | integer                         |
+| tool         | text                            |
+| comment      | text                            |
+| note         | text                            |
+| path         | text                            |
+| modified     | date/time (yyyy-mm-dd hh:mm:ss) |
 
 ## License
 
@@ -45,7 +45,7 @@ MIT
 ## Installation
 
 Prerequisites:
-* Python 2.7+
+* Python 3+
 * pip
 
 

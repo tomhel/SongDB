@@ -36,7 +36,7 @@ import codecs
 import tempfile
 import gzip
 import sys
-import ConfigParser
+import configparser
 
 
 app = Flask(__name__, static_url_path='/static')
@@ -134,7 +134,7 @@ def find_files(directory, patterns):
 
 def load_config():
     conf = os.path.join(os.path.dirname(sys.argv[0]), "config.cfg")
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(conf)
     global server_conf
     server_conf = {k: v for k, v in config.items("server")}
@@ -397,9 +397,9 @@ def check_auth(username, password):
 
 def authenticate():
     return Response(
-    'Could not verify your access level for that URL.\n'
-    'You have to login with proper credentials', 401,
-    {'WWW-Authenticate': 'Basic realm="Login Required"'})
+        'Could not verify your access level for that URL.\n'
+        'You have to login with proper credentials', 401,
+        {'WWW-Authenticate': 'Basic realm="Login Required"'})
 
 
 def requires_auth(f):
