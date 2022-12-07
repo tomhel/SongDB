@@ -1,0 +1,14 @@
+{
+    "host": "127.0.0.1",
+    "port": 3333,
+    "logfile": "/tmp/songdb.log",
+    "loglevel": "INFO",
+    "datadir": "example_data/",
+    "encoding": "utf8",
+    "database": "/tmp/songdb.db",
+    "maxresult": 1000,
+    "username": "song",
+    "password": "db",
+    "require_auth": false,
+    "backend": "waitress"
+}

@@ -8,7 +8,11 @@ Requires Python 3+. Tested on Linux and Windows. Should work in all modern brows
 
 SongDB uses SQLite3 as a database backend and provides a REST/JSON API using Flask. The web interface uses JQuery. The database model is a star schema, each attribute has its own dimension table. This makes searching fast end efficient.
 
-I wrote this for a friend in a bit of a hurry. The code is pretty raw and tailored for a specific need. I did not have time to make a test suite, but I've not heard of any bugs as of yet. Fingers crossed ;)
+I wrote this for a friend in a bit of a hurry. The code is pretty raw and tailored for a specific need. I did not have time to make a test suite, but I've not heard of any bugs yet. Fingers crossed ;)
+
+## License
+
+MIT
 
 ## Attributes
 
@@ -38,31 +42,63 @@ These attributes are indexed (all attributes are optional):
 | path         | text                            |
 | modified     | date/time (yyyy-mm-dd hh:mm:ss) |
 
-## License
-
-MIT
-
 ## Installation
 
 Prerequisites:
 * Python 3+
-* pip
+* Flask
+* Waitress
 
 
-1. Install dependencies
-
+1. Install SongDB
     ```
-    pip install -r requirements.txt
+    cd SongDB
+    pip install .
     ```
-2. Copy songdb directory to a directory of your choice
-3. Set configuration options in songdb/config.cfg
+3. Set configuration options in config.json
 4. Start SongDB
-
     ```
-    python server.py
+    songdb_server config.json
     ```
-    (on Windows it can be run as a background process using pythonw instead of python)
+    (on Windows it can be run as a background process using pythonw)
 5. Open your browser and go to http://localhost:3333 or whatever host/port you've configured
+
+## Configuration
+
+### Options
+
+| Option       | Description                                                                                                                          |
+|--------------|--------------------------------------------------------------------------------------------------------------------------------------|
+| host         | Host to bind.                                                                                                                        |
+| port         | Port to bind.                                                                                                                        |
+| logfile      | Path to log file.                                                                                                                    |
+| loglevel     | Loglevel, _DEBUG_, _INFO_, _WARNING_, _ERROR_.                                                                                       |
+| datadir      | Path to directory for loading the music.                                                                                             |
+| encoding     | Encoding of text files in _datadir_.                                                                                                 |
+| database     | Path to SQLite database file.                                                                                                        |
+| maxresult    | Maximum number of hits to return to the web interface in a query.                                                                    |
+| username     | Username to access the web interface.                                                                                                |
+| password     | Password to access the web interface.                                                                                                |
+| require_auth | Enforce username and password.                                                                                                       |
+| backend      | Server backend to use, waitress or werkzeug. Waitress is strongly recommended for production use. Only use werkzeug for development. |
+
+### Example
+```json
+{
+    "host": "127.0.0.1",
+    "port": 3333,
+    "logfile": "/tmp/songdb.log",
+    "loglevel": "INFO",
+    "datadir": "example_data/",
+    "encoding": "utf8",
+    "database": "/tmp/songdb.db",
+    "maxresult": 1000,
+    "username": "song",
+    "password": "db",
+    "require_auth": false,
+    "backend": "waitress"
+}
+```
 
 ## Loading your music
 

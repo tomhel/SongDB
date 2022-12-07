@@ -29,22 +29,19 @@ from flask import Flask, request, jsonify, Response
 import os
 import fnmatch
 import logging
-import atexit
 import sqlite3
 from datetime import datetime
 import codecs
 import tempfile
 import gzip
+import json
 import sys
-import configparser
-
 
 app = Flask(__name__, static_url_path='/static')
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 app.config["JSON_AS_ASCII"] = False
 
 server_conf = None
-logger = None
 warncount = 0
 songcount = 0
 
@@ -133,20 +130,57 @@ def find_files(directory, patterns):
 
 
 def load_config():
-    conf = os.path.join(os.path.dirname(sys.argv[0]), "config.cfg")
-    config = configparser.ConfigParser()
-    config.read(conf)
-    global server_conf
-    server_conf = {k: v for k, v in config.items("server")}
+    with open(sys.argv[1]) as f:
+        global server_conf
+        server_conf = json.load(f)
 
 
 def configure_logging():
-    if server_conf["logfile"] == ":console:":
-        logging.basicConfig(level=server_conf["loglevel"], format="%(asctime)-15s [%(levelname)s] %(message)s")
-    else:
-        logging.basicConfig(filemode="w", filename=server_conf["logfile"], level=server_conf["loglevel"], format="%(asctime)-15s [%(levelname)s] %(message)s")
-    global logger
-    logger = logging.getLogger("song-api")
+    from logging import config
+    config.dictConfig({
+        "version": 1,
+        "disable_existing_loggers": False,
+        "formatters": {
+            "generic": {
+                "format": "%(asctime)s %(levelname)s [%(process)d] %(name)s [%(module)s@%(lineno)d] - %(message)s",
+                "datefmt": "%Y-%m-%d %H:%M:%S",
+                "class": "logging.Formatter"
+            }
+        },
+        "handlers": {
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "generic",
+                "stream": "ext://sys.stdout"
+            },
+            "file": {
+                "class": "logging.FileHandler",
+                "formatter": "generic",
+                "filename": server_conf["logfile"]
+            }
+        },
+        "loggers": {
+            "waitress": {
+                "propagate": 0,
+                "level": "WARNING",
+                "handlers": ["console", "file"]
+            },
+            "werkzeug": {
+                "propagate": 0,
+                "level": "WARNING",
+                "handlers": ["console", "file"]
+            },
+            "songdb": {
+                "propagate": 0,
+                "level": server_conf["loglevel"],
+                "handlers": ["console", "file"]
+            }
+        },
+        "root": {
+            "level": "WARNING",
+            "handlers": ["console"]
+        }
+    })
 
 
 def get_dbconn():
@@ -160,7 +194,7 @@ def get_dbconn():
 
 
 def setup_db():
-    logger.info("setup database: %s" % server_conf["database"])
+    logging.getLogger(__name__).info("setup database: %s" % server_conf["database"])
     if os.path.exists(server_conf["database"]): os.unlink(server_conf["database"])
 
     conn = get_dbconn()
@@ -173,7 +207,7 @@ def setup_db():
                value %s unique not null
             )
         """ % (k[0], k[6])
-        logger.debug(sql)
+        logging.getLogger(__name__).debug(sql)
         c.execute(sql)
 
     sql = """
@@ -182,14 +216,14 @@ def setup_db():
            %s
         )
     """ % ",\n".join(["%s_id integer not null references %s_d(id)"  % (k, k) for k in keywords_dbkeys])
-    logger.debug(sql)
+    logging.getLogger(__name__).debug(sql)
     c.execute(sql)
 
     sql = """
        create view v_song as select song_f.id, %s from song_f\n%s
     """ % (",\n".join(["%s_d.value as %s" % (k, k) for k in keywords_dbkeys]),
            "\n".join(["join %s_d on %s_d.id = song_f.%s_id" % (k, k, k) for k in keywords_dbkeys]))
-    logger.debug(sql)
+    logging.getLogger(__name__).debug(sql)
     c.execute(sql)
     conn.commit()
     conn.close()
@@ -200,7 +234,7 @@ def load_data():
     global songcount
     warncount = 0
     songcount = 0
-    logger.info("loading data: %s" % server_conf["datadir"])
+    logging.getLogger(__name__).info("loading data: %s" % server_conf["datadir"])
     conn = get_dbconn()
     c = conn.cursor()
 
@@ -212,7 +246,7 @@ def load_data():
         if f.endswith(".txt.gz"):
             media = os.path.splitext(media)[0]
             extracted = True
-            logger.debug("extracting file: %s" % f)
+            logging.getLogger(__name__).debug("extracting file: %s" % f)
             gziptmp = tempfile.mkstemp()
 
             with gzip.open(f, "rb") as gzipf:
@@ -222,14 +256,14 @@ def load_data():
             f = gziptmp[1]
 
         enc = server_conf["encoding"]
-        logger.info("loading file: %s, %s" % (org_file, enc))
+        logging.getLogger(__name__).info("loading file: %s, %s" % (org_file, enc))
 
         with codecs.open(f, "r", enc) as ff:
             lines = [x.strip().strip(u"\ufeff").strip() for x in ff.readlines()]
             lines.append("-")
 
         if extracted:
-            logger.debug("removing file: %s" % f)
+            logging.getLogger(__name__).debug("removing file: %s" % f)
             os.unlink(f)
 
         data = {}
@@ -258,8 +292,8 @@ def load_data():
                         sql = """
                            insert or ignore into %s_d (value) values (?)
                         """ % k
-                        logger.debug(sql)
-                        logger.debug(val)
+                        logging.getLogger(__name__).debug(sql)
+                        logging.getLogger(__name__).debug(val)
                         c.execute(sql, [val])
 
                     sql = """
@@ -268,8 +302,8 @@ def load_data():
                            ", ".join(["%s_d.id" % a for a in keywords_dbkeys]),
                            ", ".join(["%s_d" % a for a in keywords_dbkeys]),
                            " and ".join(["%s_d.value = ?" % a for a in keywords_dbkeys]))
-                    logger.debug(sql)
-                    logger.debug(val_list)
+                    logging.getLogger(__name__).debug(sql)
+                    logging.getLogger(__name__).debug(val_list)
                     c.execute(sql, val_list)
                     conn.commit()
                     songcount += 1
@@ -277,20 +311,20 @@ def load_data():
                 data = {}
 
             elif x[0] not in keywords_dbkeys:
-                logger.warn("unknown key in file (%s): %s" % (org_file, x))
+                logging.getLogger(__name__).warning("unknown key in file (%s): %s" % (org_file, x))
                 warncount += 1
             else:
                 data[x[0]] = x[1]
 
     c.execute("select count(*) from v_song")
     loadedcount = c.fetchone()[0]
-    logger.info("Found %d songs. Loaded %d songs with %d warnings" % (loadedcount, songcount, warncount))
+    logging.getLogger(__name__).info("Found %d songs. Loaded %d songs with %d warnings" % (loadedcount, songcount, warncount))
 
     if loadedcount != songcount:
-        logger.warn("%d songs was not loaded" % (songcount - loadedcount))
+        logging.getLogger(__name__).warning("%d songs was not loaded" % (songcount - loadedcount))
 
     if warncount > 0:
-        logger.warn("songs loaded with %d warnings" % warncount)
+        logging.getLogger(__name__).warning("songs loaded with %d warnings" % warncount)
 
     conn.close()
 
@@ -300,8 +334,8 @@ def fetch_song(songid):
     fields.append("id")
 
     sql = "select %s from v_song where " % ", ".join(fields) + "id = ?"
-    logger.debug(sql)
-    logger.debug(songid)
+    logging.getLogger(__name__).debug(sql)
+    logging.getLogger(__name__).debug(songid)
     conn = get_dbconn()
     c = conn.cursor()
     c.execute(sql, (songid,))
@@ -350,9 +384,9 @@ def find_songs(afilter):
     fields = [
         "id", "media", "album", "artist", "title", "comment", "bitrate", "bitdepth", "samplerate", "channels", "length", "codec"
     ]
-    sql = "select %s from v_song where " % ", ".join(fields) + where + " limit " + server_conf["maxresult"]
-    logger.debug(sql)
-    logger.debug(values)
+    sql = "select %s from v_song where " % ", ".join(fields) + where + " limit " + str(server_conf["maxresult"])
+    logging.getLogger(__name__).debug(sql)
+    logging.getLogger(__name__).debug(values)
     conn = get_dbconn()
     c = conn.cursor()
 
@@ -391,27 +425,23 @@ def build_where(conds):
     return " and ".join(allgroups), values
 
 
-def check_auth(username, password):
+def valid_auth(username, password):
     return username == server_conf["username"] and password == server_conf["password"]
 
 
-def authenticate():
-    return Response(
-        'Could not verify your access level for that URL.\n'
-        'You have to login with proper credentials', 401,
-        {'WWW-Authenticate': 'Basic realm="Login Required"'})
-
-
 def requires_auth(f):
-    # basic auth, based on code snippet: http://flask.pocoo.org/snippets/8/
+    # basic auth
     @wraps(f)
     def decorated(*args, **kwargs):
         auth = request.authorization
 
-        if not str2bool(server_conf["require_auth"]):
+        if not server_conf["require_auth"]:
             return f(*args, **kwargs)
-        elif not auth or not check_auth(auth.username, auth.password):
-            return authenticate()
+        elif not auth or not valid_auth(auth.username, auth.password):
+            return Response(
+                'Could not verify your access level for that URL.\n'
+                'You have to login with proper credentials', 401,
+                {'WWW-Authenticate': 'Basic realm="Login Required"'})
         else:
             return f(*args, **kwargs)
 
@@ -421,7 +451,7 @@ def requires_auth(f):
 @app.route('/song', methods=['POST'])
 @requires_auth
 def do_search():
-    logger.debug("search")
+    logging.getLogger(__name__).debug("search")
     jsondata = request.get_json()
 
     if "filter" not in jsondata:
@@ -430,7 +460,7 @@ def do_search():
     if jsondata["filter"] is None or jsondata["filter"].strip() == "":
         return jsonify({"songs": []})
 
-    logger.debug(jsondata["filter"])
+    logging.getLogger(__name__).debug(jsondata["filter"])
     result = find_songs(jsondata["filter"])
     return jsonify({"songs": result})
 
@@ -438,7 +468,7 @@ def do_search():
 @app.route('/song/<int:songid>', methods=['GET'])
 @requires_auth
 def get_song(songid):
-    logger.debug("get song: %d" % songid)
+    logging.getLogger(__name__).debug("get song: %d" % songid)
     song = fetch_song(songid)
 
     if song is None:
@@ -450,7 +480,7 @@ def get_song(songid):
 @app.route('/song/<int:songid>/<string:attribute>', methods=['GET'])
 @requires_auth
 def get_song_attr(songid, attribute):
-    logger.debug("get song attribute: %d, %s" % (songid, attribute))
+    logging.getLogger(__name__).debug("get song attribute: %d, %s" % (songid, attribute))
     song = fetch_song(songid)
 
     if song is None:
@@ -465,7 +495,7 @@ def get_song_attr(songid, attribute):
 @app.route('/admin/info', methods=['GET'])
 @requires_auth
 def get_info():
-    logger.debug("info")
+    logging.getLogger(__name__).debug("info")
     conn = get_dbconn()
     c = conn.cursor()
     c.execute("select count(*) from v_song")
@@ -482,22 +512,14 @@ def get_info():
 @app.route('/admin/keys', methods=['GET'])
 @requires_auth
 def get_keys():
-    logger.debug("keys")
+    logging.getLogger(__name__).debug("keys")
     return jsonify({"keys": sorted([x[0] for x in keywords])})
-
-
-@app.route('/admin/shutdown', methods=['GET'])
-@requires_auth
-def do_shutdown():
-    logger.info("api shutdown triggered")
-    shutdown_server()
-    return jsonify({})
 
 
 @app.route('/admin/log', methods=['GET'])
 @requires_auth
 def get_log():
-    logger.debug("log")
+    logging.getLogger(__name__).debug("log")
 
     def generate():
         with open(server_conf["logfile"], "r") as f:
@@ -510,25 +532,25 @@ def get_log():
 @app.route("/")
 @requires_auth
 def get_index():
-    logger.debug("index")
+    logging.getLogger(__name__).debug("index")
     return app.send_static_file("index.html")
 
 
 @app.errorhandler(NotFoundError)
 def not_found_error(error):
-    logger.debug("Not found: %s" % error.message)
+    logging.getLogger(__name__).debug("Not found: %s" % error.message)
     return create_json_error_response(404, "Not found", error.message)
 
 
 @app.errorhandler(ValidationError)
 def bad_request_error(error):
-    logger.debug("Bad request: %s" % error.message)
+    logging.getLogger(__name__).debug("Bad request: %s" % error.message)
     return create_json_error_response(400, "Bad request", error.message)
 
 
 @app.errorhandler(500)
 def internal_error(error):
-    logger.error("Internal error: %s" % str(error))
+    logging.getLogger(__name__).error("Internal error: %s" % str(error))
     return create_json_error_response(500, "Internal server error", str(error))
 
 
@@ -543,43 +565,36 @@ def create_json_error_response(code, reason, description):
     return response
 
 
-def str2bool(s):
-    return s.lower() in ["true"]
+def start_development_server():
+    logging.getLogger(__name__).warning("starting development server (werkzeug)")
+    app.run(host=server_conf['host'], port=int(server_conf['port']), debug=False)
 
 
-def remove_pid():
-    if os.path.isfile(server_conf['pidfile']):
-        os.unlink(server_conf['pidfile'])
-
-
-def create_pid():
-    atexit.register(remove_pid)
-    with open(server_conf['pidfile'], "w") as f:
-        f.write(str(os.getpid()))
-
-
-def start_server():
-    logger.info("starting server")
-    app.run(host=server_conf['host'], port=int(server_conf['port']), debug=str2bool(server_conf['debug']))
-
-
-def shutdown_server():
-    func = request.environ.get('werkzeug.server.shutdown')
-
-    if func is None:
-        raise RuntimeError('Not running with the Werkzeug Server')
-
-    func()
+def start_production_server():
+    logging.getLogger(__name__).info("starting production server (waitress)")
+    from waitress import serve
+    serve(app, host=server_conf["host"], port=int(server_conf["port"]))
 
 
 def init():
     load_config()
     configure_logging()
-    create_pid()
     setup_db()
     load_data()
 
 
-if __name__ == '__main__':
+def main():
+    if len(sys.argv) != 2:
+        print(f"Usage: {os.path.basename(sys.argv[0])} <config file>")
+        return
     init()
-    start_server()
+    if server_conf["backend"].lower() == "waitress":
+        start_production_server()
+    elif server_conf["backend"].lower() == "werkzeug":
+        start_development_server()
+    else:
+        raise Exception(f"invalid backend: {server_conf['backend']}")
+
+
+if __name__ == '__main__':
+    main()

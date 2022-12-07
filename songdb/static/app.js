@@ -139,14 +139,6 @@ $.getJSON("/admin/info", function(json) {
     }
 });
 
-$("#shutdownbtn").click(function () {
-    var x = confirm("SongDB will shutdown");
-
-    if (x) {
-       $.getJSON("/admin/shutdown");
-    }
-});
-
 $("#clearbtn").click(function () {
     var box = $("#searchbox");
     box.val("");
