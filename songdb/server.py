@@ -29,6 +29,7 @@ from flask import Flask, request, jsonify, Response
 import os
 import fnmatch
 import logging
+import logging.config
 import sqlite3
 from datetime import datetime
 import codecs
@@ -136,8 +137,7 @@ def load_config():
 
 
 def configure_logging():
-    from logging import config
-    config.dictConfig({
+    logging.config.dictConfig({
         "version": 1,
         "disable_existing_loggers": False,
         "formatters": {
