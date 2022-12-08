@@ -60,7 +60,7 @@ def expand_keywords(kw):
 
     for k in kw:
         for op, dbop, func in zip(k[1], k[2], k[3]):
-           kw_list.append(("%s%s" % (k[0], op), dbop, func, k[4], k[5], k[6], k[7]))
+            kw_list.append(("%s%s" % (k[0], op), dbop, func, k[4], k[5], k[6], k[7]))
 
     return kw_list
 
@@ -88,30 +88,51 @@ date_funcs = [
 ]
 
 keywords = [
-    ("media", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("track", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
-    ("title", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("length", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
-    ("artist", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("albumartist", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("composer", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("performer", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("album", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("date", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("genre", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("codec", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("bitrate", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
-    ("codecprofile", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("bitdepth", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
-    ("samplerate", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
-    ("channels", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
-    ("tool", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("comment", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("note", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("path", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, lambda x: x.strip(), lambda x: x, "text", ""),
-    ("modified", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], date_funcs,
-        lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds(),
-        lambda x: datetime.utcfromtimestamp(x).strftime('%Y-%m-%d %H:%M:%S'), "integer", -9223372036854775808)
+    ("media", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("track", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, 
+     lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
+    ("title", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("length", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, 
+     lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
+    ("artist", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("albumartist", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("composer", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("performer", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("album", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("date", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("genre", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("codec", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("bitrate", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, 
+     lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
+    ("codecprofile", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("bitdepth", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, 
+     lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
+    ("samplerate", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, 
+     lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
+    ("channels", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], int_funcs, 
+     lambda x: int(x.strip()), lambda x: x, "integer", -9223372036854775808),
+    ("tool", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("comment", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("note", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("path", ["=", "~", ":"], ["like", "not like", "collate nocase ="], text_funcs, 
+     lambda x: x.strip(), lambda x: x, "text", ""),
+    ("modified", ["=", "<", ">", "~", ":"], ["=", "<", ">", "!=", "="], date_funcs, 
+     lambda x: (datetime.strptime(x.strip(), "%Y-%m-%d %H:%M:%S") - datetime(1970, 1, 1)).total_seconds(), 
+     lambda x: datetime.utcfromtimestamp(x).strftime('%Y-%m-%d %H:%M:%S'), "integer", -9223372036854775808)
 ]
 
 keywords_dbkeys = [x[0] for x in keywords]
@@ -318,7 +339,8 @@ def load_data():
 
     c.execute("select count(*) from v_song")
     loadedcount = c.fetchone()[0]
-    logging.getLogger(__name__).info("Found %d songs. Loaded %d songs with %d warnings" % (loadedcount, songcount, warncount))
+    logging.getLogger(__name__).info(
+        "Found %d songs. Loaded %d songs with %d warnings" % (loadedcount, songcount, warncount))
 
     if loadedcount != songcount:
         logging.getLogger(__name__).warning("%d songs was not loaded" % (songcount - loadedcount))
@@ -344,7 +366,8 @@ def fetch_song(songid):
     if row is None:
         return None
 
-    result = {k: keywords_lookup[k][5](v) if k in keywords_lookup else v for k, v in zip(fields, row) if k == "id" or v != keywords_lookup[k][7]}
+    result = {k: keywords_lookup[k][5](v) if k in keywords_lookup else v 
+              for k, v in zip(fields, row) if k == "id" or v != keywords_lookup[k][7]}
     conn.close()
     return result
 
@@ -382,7 +405,8 @@ def find_songs(afilter):
     where, values = build_where(set(criterias))
 
     fields = [
-        "id", "media", "album", "artist", "title", "comment", "bitrate", "bitdepth", "samplerate", "channels", "length", "codec"
+        "id", "media", "album", "artist", "title", "comment", "bitrate", 
+        "bitdepth", "samplerate", "channels", "length", "codec"
     ]
     sql = "select %s from v_song where " % ", ".join(fields) + where + " limit " + str(server_conf["maxresult"])
     logging.getLogger(__name__).debug(sql)
@@ -393,7 +417,8 @@ def find_songs(afilter):
     result = []
 
     for res in c.execute(sql, values):
-        result.append({k: keywords_lookup[k][5](v) if k in keywords_lookup else v for k, v in zip(fields, res) if k == "id" or v != keywords_lookup[k][7]})
+        result.append({k: keywords_lookup[k][5](v) if k in keywords_lookup else v 
+                       for k, v in zip(fields, res) if k == "id" or v != keywords_lookup[k][7]})
 
     conn.close()
     return result
@@ -403,9 +428,9 @@ def build_where(conds):
     condgroups = {}
 
     for c in conds:
-        l = condgroups.get(c[0], [])
-        l.append(c)
-        condgroups[c[0]] = l
+        li = condgroups.get(c[0], [])
+        li.append(c)
+        condgroups[c[0]] = li
 
     allgroups = []
     values = []
