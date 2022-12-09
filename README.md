@@ -6,7 +6,7 @@ SongDB indexes your music collection (CDs, files, whatever) and makes it all sea
 
 Requires Python 3+. Tested on Linux and Windows. Should work in all modern browsers.
 
-SongDB uses SQLite3 as a database backend and provides a REST/JSON API using Flask and Waitress. The web interface uses JQuery. The database model is a star schema, each attribute has its own dimension table. This makes searching fast end efficient.
+SongDB uses SQLite3 as a database backend and provides a REST/JSON API using Flask and Waitress. The web interface uses JQuery. The database model is a star schema, each attribute has its own dimension table. This makes searching fast and efficient.
 
 I wrote this for a friend in a bit of a hurry. The code is pretty raw and tailored for a specific need. I did not have time to make a test suite, but I've not heard of any bugs yet. Fingers crossed ;)
 
