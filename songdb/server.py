@@ -282,7 +282,7 @@ def load_data():
         loaded.add(fpath)
 
         if fpath in current:
-            if fmtime == current[fpath][1]:
+            if abs(fmtime - current[fpath][1]) <= sys.float_info.epsilon:  # equals fp
                 continue
             else:
                 c.execute("delete from song_f where file_id = ?", (current[fpath][0],))
