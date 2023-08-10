@@ -81,7 +81,7 @@ Dependencies:
 | password     | Password to access the web interface.                                                                                                |
 | require_auth | Enforce username and password.                                                                                                       |
 | backend      | Server backend to use, waitress or werkzeug. Waitress is strongly recommended for production use. Only use werkzeug for development. |
-| scandelay    | Scan interval for change detection of files in datadir. 0 disables change detection.                                                 |
+| scandelay    | Scan interval (in seconds) for change detection of files in datadir. A value of 0 disables change detection.                         |
 
 ### Example
 ```json
