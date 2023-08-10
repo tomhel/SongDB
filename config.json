@@ -10,5 +10,6 @@
     "username": "song",
     "password": "db",
     "require_auth": false,
-    "backend": "waitress"
+    "backend": "waitress",
+    "scandelay": 300
 }

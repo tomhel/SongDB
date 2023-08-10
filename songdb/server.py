@@ -37,6 +37,8 @@ import tempfile
 import gzip
 import json
 import sys
+import time
+import threading
 
 app = Flask(__name__, static_url_path='/static')
 app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
@@ -216,7 +218,9 @@ def get_dbconn():
 
 def setup_db():
     logging.getLogger(__name__).info("setup database: %s" % server_conf["database"])
-    if os.path.exists(server_conf["database"]): os.unlink(server_conf["database"])
+    if os.path.exists(server_conf["database"]):
+        logging.getLogger(__name__).info("database already exist, skipping")
+        return
 
     conn = get_dbconn()
     c = conn.cursor()
@@ -232,11 +236,20 @@ def setup_db():
         c.execute(sql)
 
     sql = """
+        create table file_d (
+           id integer primary key,
+           value text unique not null,
+           mtime numeric not null
+        )
+    """
+    c.execute(sql)
+
+    sql = """
         create table song_f (
            id integer primary key,
            %s
         )
-    """ % ",\n".join(["%s_id integer not null references %s_d(id)"  % (k, k) for k in keywords_dbkeys])
+    """ % ",\n".join(["%s_id integer not null references %s_d(id)"  % (k, k) for k in keywords_dbkeys + ["file"]])
     logging.getLogger(__name__).debug(sql)
     c.execute(sql)
 
@@ -257,10 +270,30 @@ def load_data():
     songcount = 0
     logging.getLogger(__name__).info("loading data: %s" % server_conf["datadir"])
     conn = get_dbconn()
+    loaded = set()
     c = conn.cursor()
+    c.execute("select id, value, mtime from file_d")
+    current = {v: (i, m) for i, v, m in c}
 
     for f in find_files(server_conf["datadir"], ("*.txt", "*.txt.gz")):
         media = os.path.splitext(os.path.basename(f))[0]
+        fpath = os.path.relpath(os.path.normpath(f), os.path.normpath(server_conf["datadir"]))
+        fmtime = os.path.getmtime(f)
+        loaded.add(fpath)
+
+        if fpath in current:
+            if fmtime == current[fpath][1]:
+                continue
+            else:
+                c.execute("delete from song_f where file_id = ?", (current[fpath][0],))
+
+        sql = """
+           insert or replace into file_d (value, mtime) values (?, ?)
+        """
+
+        logging.getLogger(__name__).debug(sql)
+        c.execute(sql, (fpath, fmtime))
+
         org_file = f
         extracted = False
 
@@ -319,13 +352,13 @@ def load_data():
 
                     sql = """
                        insert into song_f (%s) select %s from %s where %s
-                    """ % (", ".join(["%s_id" % a for a in keywords_dbkeys]),
-                           ", ".join(["%s_d.id" % a for a in keywords_dbkeys]),
-                           ", ".join(["%s_d" % a for a in keywords_dbkeys]),
-                           " and ".join(["%s_d.value = ?" % a for a in keywords_dbkeys]))
+                    """ % (", ".join(["%s_id" % a for a in keywords_dbkeys + ["file"]]),
+                           ", ".join(["%s_d.id" % a for a in keywords_dbkeys + ["file"]]),
+                           ", ".join(["%s_d" % a for a in keywords_dbkeys + ["file"]]),
+                           " and ".join(["%s_d.value = ?" % a for a in keywords_dbkeys + ["file"]]))
                     logging.getLogger(__name__).debug(sql)
                     logging.getLogger(__name__).debug(val_list)
-                    c.execute(sql, val_list)
+                    c.execute(sql, val_list + [fpath])
                     conn.commit()
                     songcount += 1
 
@@ -337,13 +370,16 @@ def load_data():
             else:
                 data[x[0]] = x[1]
 
+    for x in set(current.keys()).difference(loaded):
+        c.execute("delete from song_f where file_id = ?", (current[x][0],))
+        c.execute("delete from file_d where value = ?", (x,))
+
+    conn.commit()
+
     c.execute("select count(*) from v_song")
     loadedcount = c.fetchone()[0]
     logging.getLogger(__name__).info(
-        "Found %d songs. Loaded %d songs with %d warnings" % (loadedcount, songcount, warncount))
-
-    if loadedcount != songcount:
-        logging.getLogger(__name__).warning("%d songs was not loaded" % (songcount - loadedcount))
+        "Indexing %d songs. Loaded %d songs with %d warnings" % (loadedcount, songcount, warncount))
 
     if warncount > 0:
         logging.getLogger(__name__).warning("songs loaded with %d warnings" % warncount)
@@ -601,11 +637,21 @@ def start_production_server():
     serve(app, host=server_conf["host"], port=int(server_conf["port"]))
 
 
+def detect_data_changes():
+    while True:
+        time.sleep(server_conf["scandelay"])
+        load_data()
+
+
 def init():
     load_config()
     configure_logging()
     setup_db()
     load_data()
+
+    if server_conf["scandelay"] > 0:
+        t = threading.Thread(target=detect_data_changes, daemon=True)
+        t.start()
 
 
 def main():
