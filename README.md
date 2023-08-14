@@ -104,8 +104,9 @@ Dependencies:
 
 ## Loading your music
 
-The SQLite database is populated on startup from text files placed in the configured _datadir_. These text files must all have the same encoding. For example utf8, see configuration option _encoding_. The text files can be gzipped to save disk space.
-Any number of text files can be placed in the datadir. Each text file must abide by the following format. A hypen character (-) is used to separate songs.
+The SQLite database is populated on startup from text files placed in the configured _datadir_. The _datadir_ is also scanned for changes during runtime by looking at file modified time. 
+The text files must all have the same encoding. For example utf8, see configuration option _encoding_. The text files can be gzipped to save disk space.
+Any number of text files can be placed in the _datadir_. Each text file must abide by the following format. A hypen character (-) is used to separate songs.
 (Note: only a subset of available attributes are set in this example. See list above for all available attributes)
 ```
 -
