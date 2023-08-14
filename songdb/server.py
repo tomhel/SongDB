@@ -610,14 +610,14 @@ def get_index():
 
 @app.errorhandler(NotFoundError)
 def not_found_error(error):
-    logging.getLogger(__name__).debug("Not found: %s" % error.message)
-    return create_json_error_response(404, "Not found", error.message)
+    logging.getLogger(__name__).debug("Not found: %s" % str(error))
+    return create_json_error_response(404, "Not found", str(error))
 
 
 @app.errorhandler(ValidationError)
 def bad_request_error(error):
-    logging.getLogger(__name__).debug("Bad request: %s" % error.message)
-    return create_json_error_response(400, "Bad request", error.message)
+    logging.getLogger(__name__).debug("Bad request: %s" % str(error))
+    return create_json_error_response(400, "Bad request", str(error))
 
 
 @app.errorhandler(500)
