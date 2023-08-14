@@ -131,12 +131,6 @@ $.getJSON("/admin/keys", function(json) {
 $.getJSON("/admin/info", function(json) {
     var text = "(" + json.loaded + " songs, " + Math.ceil(json.dbsize / (1024 * 1024)) + " MB)";
     $("#appinfo").text(text);
-
-    if (json.loaded != json.found || json.warnings > 0) {
-        var missing = json.found - json.loaded;
-        text = "(" + missing + " songs missing, " + json.warnings + " warnings)";
-        $("#appwarn").text(text);
-    }
 });
 
 $("#clearbtn").click(function () {

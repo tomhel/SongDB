@@ -45,8 +45,7 @@ app.config["JSONIFY_PRETTYPRINT_REGULAR"] = False
 app.config["JSON_AS_ASCII"] = False
 
 server_conf = None
-warncount = 0
-songcount = 0
+data_error = False
 
 
 class NotFoundError(Exception):
@@ -177,9 +176,11 @@ def configure_logging():
                 "stream": "ext://sys.stdout"
             },
             "file": {
-                "class": "logging.FileHandler",
+                "class": "logging.handlers.RotatingFileHandler",
                 "formatter": "generic",
-                "filename": server_conf["logfile"]
+                "filename": server_conf["logfile"],
+                "maxBytes": 10 * 1024 * 1024,
+                "backupCount": 10
             }
         },
         "loggers": {
@@ -264,8 +265,17 @@ def setup_db():
 
 
 def load_data():
-    global warncount
-    global songcount
+    global data_error
+
+    try:
+        load_data_internal()
+        data_error = False
+    except Exception:
+        data_error = True
+        logging.getLogger(__name__).exception("Error loading data")
+
+
+def load_data_internal():
     warncount = 0
     songcount = 0
     logging.getLogger(__name__).info("loading data: %s" % server_conf["datadir"])
@@ -562,8 +572,6 @@ def get_info():
     c.execute("select count(*) from v_song")
     result = {
         "loaded": c.fetchone()[0],
-        "found": songcount,
-        "warnings": warncount,
         "dbsize": os.path.getsize(server_conf["database"])
     }
     conn.close()
@@ -593,6 +601,9 @@ def get_log():
 @app.route("/")
 @requires_auth
 def get_index():
+    if data_error:
+        return get_log()
+
     logging.getLogger(__name__).debug("index")
     return app.send_static_file("index.html")
 
