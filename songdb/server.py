@@ -218,9 +218,9 @@ def get_dbconn():
 
 
 def setup_db():
-    logging.getLogger(__name__).info("setup database: %s" % server_conf["database"])
+    logging.getLogger(__name__).info("setup database: %s", server_conf["database"])
     if os.path.exists(server_conf["database"]):
-        logging.getLogger(__name__).info("database already exist, skipping")
+        logging.getLogger(__name__).info("database already exist, skipping setup")
         return
 
     conn = get_dbconn()
@@ -278,7 +278,7 @@ def load_data():
 def load_data_internal():
     warncount = 0
     songcount = 0
-    logging.getLogger(__name__).info("loading data: %s" % server_conf["datadir"])
+    logging.getLogger(__name__).info("loading data: %s", server_conf["datadir"])
     conn = get_dbconn()
     loaded = set()
     c = conn.cursor()
@@ -310,7 +310,7 @@ def load_data_internal():
         if f.endswith(".txt.gz"):
             media = os.path.splitext(media)[0]
             extracted = True
-            logging.getLogger(__name__).debug("extracting file: %s" % f)
+            logging.getLogger(__name__).debug("extracting file: %s", f)
             gziptmp = tempfile.mkstemp()
 
             with gzip.open(f, "rb") as gzipf:
@@ -320,14 +320,14 @@ def load_data_internal():
             f = gziptmp[1]
 
         enc = server_conf["encoding"]
-        logging.getLogger(__name__).info("loading file: %s, %s" % (org_file, enc))
+        logging.getLogger(__name__).info("loading file: %s, %s", org_file, enc)
 
         with codecs.open(f, "r", enc) as ff:
             lines = [x.strip().strip(u"\ufeff").strip() for x in ff.readlines()]
             lines.append("-")
 
         if extracted:
-            logging.getLogger(__name__).debug("removing file: %s" % f)
+            logging.getLogger(__name__).debug("removing file: %s", f)
             os.unlink(f)
 
         data = {}
@@ -374,7 +374,7 @@ def load_data_internal():
                 data = {}
 
             elif x[0] not in keywords_dbkeys:
-                logging.getLogger(__name__).warning("unknown key in file (%s): %s" % (org_file, x))
+                logging.getLogger(__name__).warning("unknown key in file (%s): %s", org_file, x)
                 warncount += 1
             else:
                 data[x[0]] = x[1]
@@ -382,6 +382,7 @@ def load_data_internal():
         conn.commit()
 
     for x in set(current.keys()).difference(loaded):
+        logging.getLogger(__name__).info("Removing from index: %s", x)
         c.execute("delete from song_f where file_id = ?", (current[x][0],))
         c.execute("delete from file_d where value = ?", (x,))
         conn.commit()
@@ -389,10 +390,10 @@ def load_data_internal():
     c.execute("select count(*) from v_song")
     loadedcount = c.fetchone()[0]
     logging.getLogger(__name__).info(
-        "Indexing %d songs. Loaded %d songs with %d warnings" % (loadedcount, songcount, warncount))
+        "Indexing %d songs. Loaded %d songs with %d warnings", loadedcount, songcount, warncount)
 
     if warncount > 0:
-        logging.getLogger(__name__).warning("songs loaded with %d warnings" % warncount)
+        logging.getLogger(__name__).warning("songs loaded with %d warnings", warncount)
 
     conn.close()
 
@@ -539,7 +540,7 @@ def do_search():
 @app.route('/song/<int:songid>', methods=['GET'])
 @requires_auth
 def get_song(songid):
-    logging.getLogger(__name__).debug("get song: %d" % songid)
+    logging.getLogger(__name__).debug("get song: %d", songid)
     song = fetch_song(songid)
 
     if song is None:
@@ -551,7 +552,7 @@ def get_song(songid):
 @app.route('/song/<int:songid>/<string:attribute>', methods=['GET'])
 @requires_auth
 def get_song_attr(songid, attribute):
-    logging.getLogger(__name__).debug("get song attribute: %d, %s" % (songid, attribute))
+    logging.getLogger(__name__).debug("get song attribute: %d, %s", songid, attribute)
     song = fetch_song(songid)
 
     if song is None:
@@ -610,19 +611,19 @@ def get_index():
 
 @app.errorhandler(NotFoundError)
 def not_found_error(error):
-    logging.getLogger(__name__).debug("Not found: %s" % str(error))
+    logging.getLogger(__name__).debug("Not found: %s", str(error))
     return create_json_error_response(404, "Not found", str(error))
 
 
 @app.errorhandler(ValidationError)
 def bad_request_error(error):
-    logging.getLogger(__name__).debug("Bad request: %s" % str(error))
+    logging.getLogger(__name__).debug("Bad request: %s", str(error))
     return create_json_error_response(400, "Bad request", str(error))
 
 
 @app.errorhandler(500)
 def internal_error(error):
-    logging.getLogger(__name__).error("Internal error: %s" % str(error))
+    logging.getLogger(__name__).error("Internal error: %s", str(error))
     return create_json_error_response(500, "Internal server error", str(error))
 
 
