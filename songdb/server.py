@@ -210,8 +210,8 @@ def configure_logging():
 def get_dbconn():
     conn = sqlite3.connect(server_conf["database"])
     c = conn.cursor()
-    c.execute("PRAGMA journal_mode=MEMORY")
-    c.execute("PRAGMA synchronous=OFF")
+    c.execute("PRAGMA journal_mode=WAL")
+    c.execute("PRAGMA synchronous=NORMAL")
     c.execute("PRAGMA case_sensitive_like=OFF")
     conn.commit()
     return conn
@@ -369,7 +369,6 @@ def load_data_internal():
                     logging.getLogger(__name__).debug(sql)
                     logging.getLogger(__name__).debug(val_list)
                     c.execute(sql, val_list + [fpath])
-                    conn.commit()
                     songcount += 1
 
                 data = {}
@@ -380,11 +379,12 @@ def load_data_internal():
             else:
                 data[x[0]] = x[1]
 
+        conn.commit()
+
     for x in set(current.keys()).difference(loaded):
         c.execute("delete from song_f where file_id = ?", (current[x][0],))
         c.execute("delete from file_d where value = ?", (x,))
-
-    conn.commit()
+        conn.commit()
 
     c.execute("select count(*) from v_song")
     loadedcount = c.fetchone()[0]
