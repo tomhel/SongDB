@@ -384,7 +384,7 @@ def load_data_internal():
     for x in set(current.keys()).difference(loaded):
         logging.getLogger(__name__).info("Removing from index: %s", x)
         c.execute("delete from song_f where file_id = ?", (current[x][0],))
-        c.execute("delete from file_d where value = ?", (x,))
+        c.execute("delete from file_d where id = ?", (current[x][0],))
         conn.commit()
 
     c.execute("select count(*) from v_song")
