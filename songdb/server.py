@@ -213,7 +213,7 @@ def get_dbconn():
     c.execute("PRAGMA journal_mode=WAL")
     c.execute("PRAGMA synchronous=NORMAL")
     c.execute("PRAGMA case_sensitive_like=OFF")
-    conn.commit()
+    conn.rollback()
     return conn
 
 
