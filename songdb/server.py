@@ -26,12 +26,13 @@ SOFTWARE.
 
 from functools import wraps
 from flask import Flask, request, jsonify, Response
+from contextlib import contextmanager
+from datetime import datetime
 import os
 import fnmatch
 import logging
 import logging.config
 import sqlite3
-from datetime import datetime
 import codecs
 import tempfile
 import gzip
@@ -207,14 +208,18 @@ def configure_logging():
     })
 
 
+@contextmanager
 def get_dbconn():
-    conn = sqlite3.connect(server_conf["database"])
-    c = conn.cursor()
-    c.execute("PRAGMA journal_mode=WAL")
-    c.execute("PRAGMA synchronous=NORMAL")
-    c.execute("PRAGMA case_sensitive_like=OFF")
-    conn.rollback()
-    return conn
+    conn = None
+    try:
+        conn = sqlite3.connect(server_conf["database"])
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
+        conn.execute("PRAGMA case_sensitive_like=OFF")
+        yield conn
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def setup_db():
@@ -223,45 +228,44 @@ def setup_db():
         logging.getLogger(__name__).info("database already exist, skipping setup")
         return
 
-    conn = get_dbconn()
-    c = conn.cursor()
+    with get_dbconn() as conn:
+        with conn:
+            c = conn.cursor()
 
-    for k in keywords_db:
-        sql = """
-            create table %s_d (
-               id integer primary key,
-               value %s unique not null
-            )
-        """ % (k[0], k[6])
-        logging.getLogger(__name__).debug(sql)
-        c.execute(sql)
+            for k in keywords_db:
+                sql = """
+                    create table %s_d (
+                       id integer primary key,
+                       value %s unique not null
+                    )
+                """ % (k[0], k[6])
+                logging.getLogger(__name__).debug(sql)
+                c.execute(sql)
 
-    sql = """
-        create table file_d (
-           id integer primary key,
-           value text unique not null,
-           mtime numeric not null
-        )
-    """
-    c.execute(sql)
+            sql = """
+                create table file_d (
+                   id integer primary key,
+                   value text unique not null,
+                   mtime numeric not null
+                )
+            """
+            c.execute(sql)
 
-    sql = """
-        create table song_f (
-           id integer primary key,
-           %s
-        )
-    """ % ",\n".join(["%s_id integer not null references %s_d(id)"  % (k, k) for k in keywords_dbkeys + ["file"]])
-    logging.getLogger(__name__).debug(sql)
-    c.execute(sql)
+            sql = """
+                create table song_f (
+                   id integer primary key,
+                   %s
+                )
+            """ % ",\n".join(["%s_id integer not null references %s_d(id)"  % (k, k) for k in keywords_dbkeys + ["file"]])
+            logging.getLogger(__name__).debug(sql)
+            c.execute(sql)
 
-    sql = """
-       create view v_song as select song_f.id, %s from song_f\n%s
-    """ % (",\n".join(["%s_d.value as %s" % (k, k) for k in keywords_dbkeys]),
-           "\n".join(["join %s_d on %s_d.id = song_f.%s_id" % (k, k, k) for k in keywords_dbkeys]))
-    logging.getLogger(__name__).debug(sql)
-    c.execute(sql)
-    conn.commit()
-    conn.close()
+            sql = """
+               create view v_song as select song_f.id, %s from song_f\n%s
+            """ % (",\n".join(["%s_d.value as %s" % (k, k) for k in keywords_dbkeys]),
+                   "\n".join(["join %s_d on %s_d.id = song_f.%s_id" % (k, k, k) for k in keywords_dbkeys]))
+            logging.getLogger(__name__).debug(sql)
+            c.execute(sql)
 
 
 def load_data():
@@ -279,123 +283,120 @@ def load_data_internal():
     warncount = 0
     songcount = 0
     logging.getLogger(__name__).info("loading data: %s", server_conf["datadir"])
-    conn = get_dbconn()
-    loaded = set()
-    c = conn.cursor()
-    c.execute("select id, value, mtime from file_d")
-    current = {v: (i, m) for i, v, m in c}
+    with get_dbconn() as conn:
+        c = conn.cursor()
+        c.execute("select id, value, mtime from file_d")
+        current = {v: (i, m) for i, v, m in c}
+        loaded = set()
 
-    for f in find_files(server_conf["datadir"], ("*.txt", "*.txt.gz")):
-        media = os.path.splitext(os.path.basename(f))[0]
-        fpath = os.path.relpath(os.path.normpath(f), os.path.normpath(server_conf["datadir"]))
-        fmtime = os.path.getmtime(f)
-        loaded.add(fpath)
+        for f in find_files(server_conf["datadir"], ("*.txt", "*.txt.gz")):
+            media = os.path.splitext(os.path.basename(f))[0]
+            fpath = os.path.relpath(os.path.normpath(f), os.path.normpath(server_conf["datadir"]))
+            fmtime = os.path.getmtime(f)
+            loaded.add(fpath)
 
-        if fpath in current:
-            if abs(fmtime - current[fpath][1]) <= sys.float_info.epsilon:  # equals fp
-                continue
-            else:
-                c.execute("delete from song_f where file_id = ?", (current[fpath][0],))
+            with conn:
+                if fpath in current:
+                    if abs(fmtime - current[fpath][1]) <= sys.float_info.epsilon:  # equals fp
+                        continue
+                    else:
+                        c.execute("delete from song_f where file_id = ?", (current[fpath][0],))
 
-        sql = """
-           insert or replace into file_d (value, mtime) values (?, ?)
-        """
+                sql = """
+                   insert or replace into file_d (value, mtime) values (?, ?)
+                """
 
-        logging.getLogger(__name__).debug(sql)
-        c.execute(sql, (fpath, fmtime))
+                logging.getLogger(__name__).debug(sql)
+                c.execute(sql, (fpath, fmtime))
 
-        org_file = f
-        extracted = False
+                org_file = f
+                extracted = False
 
-        if f.endswith(".txt.gz"):
-            media = os.path.splitext(media)[0]
-            extracted = True
-            logging.getLogger(__name__).debug("extracting file: %s", f)
-            gziptmp = tempfile.mkstemp()
+                if f.endswith(".txt.gz"):
+                    media = os.path.splitext(media)[0]
+                    extracted = True
+                    logging.getLogger(__name__).debug("extracting file: %s", f)
+                    gziptmp = tempfile.mkstemp()
 
-            with gzip.open(f, "rb") as gzipf:
-                with os.fdopen(gziptmp[0], "wb") as plainf:
-                    plainf.writelines(gzipf)
+                    with gzip.open(f, "rb") as gzipf:
+                        with os.fdopen(gziptmp[0], "wb") as plainf:
+                            plainf.writelines(gzipf)
 
-            f = gziptmp[1]
+                    f = gziptmp[1]
 
-        enc = server_conf["encoding"]
-        logging.getLogger(__name__).info("loading file: %s, %s", org_file, enc)
+                enc = server_conf["encoding"]
+                logging.getLogger(__name__).info("loading file: %s, %s", org_file, enc)
 
-        with codecs.open(f, "r", enc) as ff:
-            lines = [x.strip().strip(u"\ufeff").strip() for x in ff.readlines()]
-            lines.append("-")
+                with codecs.open(f, "r", enc) as ff:
+                    lines = [x.strip().strip(u"\ufeff").strip() for x in ff.readlines()]
+                    lines.append("-")
 
-        if extracted:
-            logging.getLogger(__name__).debug("removing file: %s", f)
-            os.unlink(f)
-
-        data = {}
-
-        for x in [x.split(":", 1) for x in lines]:
-            if x[0] == "":
-                continue
-            if x[0] == '-':
-                if len(data) > 0:
-                    val_list = []
-
-                    for k in keywords_dbkeys:
-                        if k == "media":
-                            val = media
-                            val_list.append(val)
-                        else:
-                            val = data[k] if k in data else None
-
-                            if val is None or val.strip() == "":
-                                val = keywords_lookup[k][7]
-                            else:
-                                val = keywords_lookup[k][4](val)
-
-                            val_list.append(val)
-
-                        sql = """
-                           insert or ignore into %s_d (value) values (?)
-                        """ % k
-                        logging.getLogger(__name__).debug(sql)
-                        logging.getLogger(__name__).debug(val)
-                        c.execute(sql, [val])
-
-                    sql = """
-                       insert into song_f (%s) select %s from %s where %s
-                    """ % (", ".join(["%s_id" % a for a in keywords_dbkeys + ["file"]]),
-                           ", ".join(["%s_d.id" % a for a in keywords_dbkeys + ["file"]]),
-                           ", ".join(["%s_d" % a for a in keywords_dbkeys + ["file"]]),
-                           " and ".join(["%s_d.value = ?" % a for a in keywords_dbkeys + ["file"]]))
-                    logging.getLogger(__name__).debug(sql)
-                    logging.getLogger(__name__).debug(val_list)
-                    c.execute(sql, val_list + [fpath])
-                    songcount += 1
+                if extracted:
+                    logging.getLogger(__name__).debug("removing file: %s", f)
+                    os.unlink(f)
 
                 data = {}
 
-            elif x[0] not in keywords_dbkeys:
-                logging.getLogger(__name__).warning("unknown key in file (%s): %s", org_file, x)
-                warncount += 1
-            else:
-                data[x[0]] = x[1]
+                for x in [x.split(":", 1) for x in lines]:
+                    if x[0] == "":
+                        continue
+                    if x[0] == '-':
+                        if len(data) > 0:
+                            val_list = []
 
-        conn.commit()
+                            for k in keywords_dbkeys:
+                                if k == "media":
+                                    val = media
+                                    val_list.append(val)
+                                else:
+                                    val = data[k] if k in data else None
 
-    for x in set(current.keys()).difference(loaded):
-        logging.getLogger(__name__).info("Removing from index: %s", x)
-        c.execute("delete from song_f where file_id = ?", (current[x][0],))
-        c.execute("delete from file_d where id = ?", (current[x][0],))
-        conn.commit()
+                                    if val is None or val.strip() == "":
+                                        val = keywords_lookup[k][7]
+                                    else:
+                                        val = keywords_lookup[k][4](val)
 
-    c.execute("select count(*) from v_song")
-    loadedcount = c.fetchone()[0]
-    logging.getLogger(__name__).info(
-        "Indexing %d songs. Loaded %d songs with %d warnings", loadedcount, songcount, warncount)
+                                    val_list.append(val)
 
-    if warncount > 0:
-        logging.getLogger(__name__).warning("songs loaded with %d warnings", warncount)
+                                sql = """
+                                   insert or ignore into %s_d (value) values (?)
+                                """ % k
+                                logging.getLogger(__name__).debug(sql)
+                                logging.getLogger(__name__).debug(val)
+                                c.execute(sql, [val])
 
-    conn.close()
+                            sql = """
+                               insert into song_f (%s) select %s from %s where %s
+                            """ % (", ".join(["%s_id" % a for a in keywords_dbkeys + ["file"]]),
+                                   ", ".join(["%s_d.id" % a for a in keywords_dbkeys + ["file"]]),
+                                   ", ".join(["%s_d" % a for a in keywords_dbkeys + ["file"]]),
+                                   " and ".join(["%s_d.value = ?" % a for a in keywords_dbkeys + ["file"]]))
+                            logging.getLogger(__name__).debug(sql)
+                            logging.getLogger(__name__).debug(val_list)
+                            c.execute(sql, val_list + [fpath])
+                            songcount += 1
+
+                        data = {}
+
+                    elif x[0] not in keywords_dbkeys:
+                        logging.getLogger(__name__).warning("unknown key in file (%s): %s", org_file, x)
+                        warncount += 1
+                    else:
+                        data[x[0]] = x[1]
+
+        for x in set(current.keys()).difference(loaded):
+            logging.getLogger(__name__).info("Removing from index: %s", x)
+            with conn:
+                c.execute("delete from song_f where file_id = ?", (current[x][0],))
+                c.execute("delete from file_d where id = ?", (current[x][0],))
+
+        c.execute("select count(*) from v_song")
+        loadedcount = c.fetchone()[0]
+        logging.getLogger(__name__).info(
+            "Indexing %d songs. Loaded %d songs with %d warnings", loadedcount, songcount, warncount)
+
+        if warncount > 0:
+            logging.getLogger(__name__).warning("songs loaded with %d warnings", warncount)
 
 
 def fetch_song(songid):
@@ -405,18 +406,17 @@ def fetch_song(songid):
     sql = "select %s from v_song where " % ", ".join(fields) + "id = ?"
     logging.getLogger(__name__).debug(sql)
     logging.getLogger(__name__).debug(songid)
-    conn = get_dbconn()
-    c = conn.cursor()
-    c.execute(sql, (songid,))
-    row = c.fetchone()
+    with get_dbconn() as conn:
+        c = conn.cursor()
+        c.execute(sql, (songid,))
+        row = c.fetchone()
 
-    if row is None:
-        return None
+        if row is None:
+            return None
 
-    result = {k: keywords_lookup[k][5](v) if k in keywords_lookup else v 
-              for k, v in zip(fields, row) if k == "id" or v != keywords_lookup[k][7]}
-    conn.close()
-    return result
+        result = {k: keywords_lookup[k][5](v) if k in keywords_lookup else v 
+                  for k, v in zip(fields, row) if k == "id" or v != keywords_lookup[k][7]}
+        return result
 
 
 def find_songs(afilter):
@@ -458,17 +458,15 @@ def find_songs(afilter):
     sql = "select %s from v_song where " % ", ".join(fields) + where + " limit " + str(server_conf["maxresult"])
     logging.getLogger(__name__).debug(sql)
     logging.getLogger(__name__).debug(values)
-    conn = get_dbconn()
-    c = conn.cursor()
+    with get_dbconn() as conn:
+        c = conn.cursor()
 
-    result = []
+        result = []
 
-    for res in c.execute(sql, values):
-        result.append({k: keywords_lookup[k][5](v) if k in keywords_lookup else v 
-                       for k, v in zip(fields, res) if k == "id" or v != keywords_lookup[k][7]})
-
-    conn.close()
-    return result
+        for res in c.execute(sql, values):
+            result.append({k: keywords_lookup[k][5](v) if k in keywords_lookup else v 
+                           for k, v in zip(fields, res) if k == "id" or v != keywords_lookup[k][7]})
+        return result
 
 
 def build_where(conds):
@@ -568,15 +566,14 @@ def get_song_attr(songid, attribute):
 @requires_auth
 def get_info():
     logging.getLogger(__name__).debug("info")
-    conn = get_dbconn()
-    c = conn.cursor()
-    c.execute("select count(*) from v_song")
-    result = {
-        "loaded": c.fetchone()[0],
-        "dbsize": os.path.getsize(server_conf["database"])
-    }
-    conn.close()
-    return jsonify(result)
+    with get_dbconn() as conn:
+        c = conn.cursor()
+        c.execute("select count(*) from v_song")
+        result = {
+            "loaded": c.fetchone()[0],
+            "dbsize": os.path.getsize(server_conf["database"])
+        }
+        return jsonify(result)
 
 
 @app.route('/admin/keys', methods=['GET'])
