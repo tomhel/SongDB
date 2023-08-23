@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="SongDB",
-    version="0.6",
+    version="0.7",
     description="SongDB indexes your music collection",
     author="Tommy Hellstrom",
     packages=find_packages(),
